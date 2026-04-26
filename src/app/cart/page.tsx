@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag } from "lucide-react";
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Shield } from "lucide-react";
 import { useStore } from "@/lib/store";
 
 export default function CartPage() {
@@ -55,7 +55,7 @@ export default function CartPage() {
                 <div className="relative w-full sm:w-32 h-32 rounded-2xl bg-white/5 overflow-hidden shrink-0">
                   <Image src={item.image} alt={item.name} fill className="object-cover" />
                 </div>
-                
+
                 <div className="flex-1 w-full">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-semibold text-lg line-clamp-1">{item.name}</h3>
@@ -66,7 +66,7 @@ export default function CartPage() {
                       <Trash2 size={18} />
                     </button>
                   </div>
-                  
+
                   <div className="flex flex-wrap gap-3 mb-4 text-sm text-muted-foreground">
                     {item.color && <span>Color: {item.color}</span>}
                     {item.size && <span>Size: {item.size}</span>}
@@ -74,14 +74,14 @@ export default function CartPage() {
 
                   <div className="flex items-center justify-between mt-auto">
                     <div className="flex items-center gap-3 bg-white/5 p-1 rounded-xl border border-white/10">
-                      <button 
+                      <button
                         onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
                         className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-muted-foreground"
                       >
                         <Minus size={16} />
                       </button>
                       <span className="w-6 text-center font-medium">{item.quantity}</span>
-                      <button 
+                      <button
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
                         className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-muted-foreground"
                       >
@@ -100,7 +100,7 @@ export default function CartPage() {
         <div className="w-full lg:w-[400px] shrink-0">
           <div className="glass rounded-3xl p-8 sticky top-24">
             <h2 className="text-2xl font-bold mb-6">Order Summary</h2>
-            
+
             <div className="space-y-4 mb-6 text-muted-foreground">
               <div className="flex justify-between">
                 <span>Subtotal</span>
