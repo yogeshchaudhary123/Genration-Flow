@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { useStore } from "@/lib/store";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useSession } from "next-auth/react";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -16,14 +17,30 @@ export function Navbar() {
   const cartCount = useStore((state) => state.cartCount());
   const user = useStore((state) => state.user);
 
+  const { data: session, status } = useSession();
+  const login = useStore((state) => state.login);
+  const logout = useStore((state) => state.logout);
+
   useEffect(() => {
     setMounted(true);
+    
+    // Sync NextAuth session with store
+    if (status === "authenticated" && session?.user) {
+      login({
+        id: (session.user as any).id || "user_session",
+        name: session.user.name || "",
+        email: session.user.email || "",
+      });
+    } else if (status === "unauthenticated") {
+      logout();
+    }
+
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [session, status, login, logout]);
 
   const navLinks = [
     { name: "Home", href: "/" },

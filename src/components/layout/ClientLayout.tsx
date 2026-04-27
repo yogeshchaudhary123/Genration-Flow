@@ -4,10 +4,11 @@ import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { FloatingAIChat } from "../chat/FloatingAIChat";
 import { Toaster } from "react-hot-toast";
+import { SessionProvider } from "next-auth/react";
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <SessionProvider>
       <Toaster position="top-center" reverseOrder={false} />
       <Navbar />
       <div className="flex-1 pt-16">
@@ -15,6 +16,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       </div>
       <Footer />
       <FloatingAIChat />
-    </>
+    </SessionProvider>
   );
 }

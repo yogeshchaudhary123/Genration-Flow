@@ -1,31 +1,67 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, use, useEffect } from "react";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, Shield, Truck, Sparkles, ShoppingBag, Plus, Minus, Check, Bot } from "lucide-react";
-import { mockProducts, mockReviews } from "@/lib/mock-data";
+import { mockReviews } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 
-export default function ProductDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+export default function ProductDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = use(params);
-  const product = mockProducts.find((p) => p.id === resolvedParams.id);
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeImage, setActiveImage] = useState(0);
+  const [selectedColor, setSelectedColor] = useState("");
+  const [selectedSize, setSelectedSize] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [isAdded, setIsAdded] = useState(false);
+
+  const { addToCart, toggleAiChat } = useStore();
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/products/${resolvedParams.slug}`);
+        if (res.ok) {
+          const data = await res.json();
+          // Transform database format to match component needs
+          const transformedProduct = {
+            ...data,
+            images: data.images.split(','),
+            variants: {
+              color: data.colors ? data.colors.split(',') : [],
+              size: data.sizes ? data.sizes.split(',') : [],
+            },
+            features: data.features.split(','),
+          };
+          setProduct(transformedProduct);
+          if (transformedProduct.variants.color.length > 0) setSelectedColor(transformedProduct.variants.color[0]);
+          if (transformedProduct.variants.size.length > 0) setSelectedSize(transformedProduct.variants.size[0]);
+        } else {
+          setProduct(null);
+        }
+      } catch (error) {
+        console.error("Failed to fetch product:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProduct();
+  }, [resolvedParams.slug]);
+
+  if (loading) {
+    return <div className="container mx-auto px-4 py-24 text-center">Loading product details...</div>;
+  }
 
   if (!product) {
     notFound();
   }
 
-  const [activeImage, setActiveImage] = useState(0);
-  const [selectedColor, setSelectedColor] = useState(product.variants.color?.[0] || "");
-  const [selectedSize, setSelectedSize] = useState(product.variants.size?.[0] || "");
-  const [quantity, setQuantity] = useState(1);
-  const [isAdded, setIsAdded] = useState(false);
-  
-  const { addToCart, toggleAiChat } = useStore();
-
-  const handleAddToCart = () => {
-    addToCart({
+  const handleAddToCart = async () => {
+    await addToCart({
       productId: product.id,
       name: product.name,
       price: product.price,
@@ -34,7 +70,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
       color: selectedColor,
       size: selectedSize,
     });
-    
+
     setIsAdded(true);
     setTimeout(() => setIsAdded(false), 2000);
   };
@@ -63,16 +99,15 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
               </motion.div>
             </AnimatePresence>
           </div>
-          
+
           {product.images.length > 1 && (
             <div className="flex gap-4 overflow-x-auto scrollbar-none snap-x">
-              {product.images.map((img, i) => (
+              {product.images.map((img: any, i: any) => (
                 <button
                   key={i}
                   onClick={() => setActiveImage(i)}
-                  className={`relative w-24 h-24 rounded-2xl overflow-hidden shrink-0 snap-center transition-all ${
-                    activeImage === i ? "ring-2 ring-brand-purple ring-offset-2 ring-offset-background" : "opacity-50 hover:opacity-100"
-                  }`}
+                  className={`relative w-24 h-24 rounded-2xl overflow-hidden shrink-0 snap-center transition-all ${activeImage === i ? "ring-2 ring-brand-purple ring-offset-2 ring-offset-background" : "opacity-50 hover:opacity-100"
+                    }`}
                 >
                   <Image src={img} alt={`Thumbnail ${i}`} fill className="object-cover" />
                 </button>
@@ -92,7 +127,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
                 <span className="text-muted-foreground text-sm ml-1">({product.reviews} reviews)</span>
               </div>
             </div>
-            
+
             <div className="flex items-end gap-3 mb-6">
               <span className="text-4xl font-bold">${product.price}</span>
               {product.originalPrice && (
@@ -104,7 +139,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
                 </>
               )}
             </div>
-            
+
             <p className="text-lg text-muted-foreground leading-relaxed">{product.description}</p>
           </div>
 
@@ -116,15 +151,14 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
               <div>
                 <h3 className="font-medium mb-3">Color: <span className="text-muted-foreground">{selectedColor}</span></h3>
                 <div className="flex flex-wrap gap-3">
-                  {product.variants.color.map((color) => (
+                  {product.variants.color.map((color: any) => (
                     <button
                       key={color}
                       onClick={() => setSelectedColor(color)}
-                      className={`px-4 py-2 rounded-xl border transition-all ${
-                        selectedColor === color 
-                          ? "border-brand-purple bg-brand-purple/20 text-foreground dark:text-white shadow-[0_0_15px_rgba(139,92,246,0.3)]" 
-                          : "border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 hover:border-black/20 dark:hover:border-white/30 text-muted-foreground"
-                      }`}
+                      className={`px-4 py-2 rounded-xl border transition-all ${selectedColor === color
+                        ? "border-brand-purple bg-brand-purple/20 text-foreground dark:text-white shadow-[0_0_15px_rgba(139,92,246,0.3)]"
+                        : "border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 hover:border-black/20 dark:hover:border-white/30 text-muted-foreground"
+                        }`}
                     >
                       {color}
                     </button>
@@ -137,15 +171,14 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
               <div>
                 <h3 className="font-medium mb-3">Size/Capacity: <span className="text-muted-foreground">{selectedSize}</span></h3>
                 <div className="flex flex-wrap gap-3">
-                  {product.variants.size.map((size) => (
+                  {product.variants.size.map((size: any) => (
                     <button
                       key={size}
                       onClick={() => setSelectedSize(size)}
-                      className={`px-4 py-2 rounded-xl border transition-all ${
-                        selectedSize === size 
-                          ? "border-brand-blue bg-brand-blue/20 text-foreground dark:text-white shadow-[0_0_15px_rgba(59,130,246,0.3)]" 
-                          : "border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 hover:border-black/20 dark:hover:border-white/30 text-muted-foreground"
-                      }`}
+                      className={`px-4 py-2 rounded-xl border transition-all ${selectedSize === size
+                        ? "border-brand-blue bg-brand-blue/20 text-foreground dark:text-white shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+                        : "border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 hover:border-black/20 dark:hover:border-white/30 text-muted-foreground"
+                        }`}
                     >
                       {size}
                     </button>
@@ -158,28 +191,27 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-4 mt-auto">
             <div className="flex items-center justify-between glass rounded-2xl p-1 w-full sm:w-32 h-14">
-              <button 
+              <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
                 className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
               >
                 <Minus size={18} />
               </button>
               <span className="font-medium text-lg w-8 text-center">{quantity}</span>
-              <button 
+              <button
                 onClick={() => setQuantity(quantity + 1)}
                 className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
               >
                 <Plus size={18} />
               </button>
             </div>
-            
+
             <button
               onClick={handleAddToCart}
-              className={`flex-1 h-14 rounded-2xl font-medium flex items-center justify-center gap-2 transition-all duration-300 ${
-                isAdded 
-                  ? "bg-green-500/20 text-green-400 border border-green-500/50" 
-                  : "bg-gradient-to-r from-brand-purple to-brand-blue text-white shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:opacity-90"
-              }`}
+              className={`flex-1 h-14 rounded-2xl font-medium flex items-center justify-center gap-2 transition-all duration-300 ${isAdded
+                ? "bg-green-500/20 text-green-400 border border-green-500/50"
+                : "bg-gradient-to-r from-brand-purple to-brand-blue text-white shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:opacity-90"
+                }`}
             >
               {isAdded ? (
                 <>
@@ -221,7 +253,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
               <p className="text-muted-foreground text-lg mb-6">
                 Our AI shopping assistant can analyze your needs, compare {product.name} with alternatives, and help you make the perfect choice.
               </p>
-              <button 
+              <button
                 onClick={toggleAiChat}
                 className="px-6 py-3 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 border border-black/10 dark:border-white/20 rounded-full font-medium transition-colors flex items-center gap-2"
               >
@@ -256,7 +288,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
             Write a Review
           </button>
         </div>
-        
+
         <div className="md:col-span-2 space-y-6">
           {mockReviews.map((review) => (
             <div key={review.id} className="glass p-6 rounded-3xl">
