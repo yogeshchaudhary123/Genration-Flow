@@ -46,11 +46,11 @@ export const useStore = create<AppState>()(
       // Cart State
       cart: [],
       setCart: (items) => set({ cart: items }),
-      
+
       fetchCart: async () => {
         const state = get();
         if (!state.user) return;
-        
+
         try {
           const res = await fetch('/api/cart');
           if (res.ok) {
@@ -61,7 +61,7 @@ export const useStore = create<AppState>()(
               name: item.product.name,
               price: item.product.price,
               quantity: item.quantity,
-              image: JSON.parse(item.product.images)[0],
+              image: item.product.images,
               color: item.color,
               size: item.size,
             }));
@@ -74,7 +74,7 @@ export const useStore = create<AppState>()(
 
       addToCart: async (item) => {
         const state = get();
-        
+
         // Optimistic update
         set((state) => {
           const existingItemIndex = state.cart.findIndex(
@@ -86,7 +86,7 @@ export const useStore = create<AppState>()(
             newCart[existingItemIndex].quantity += item.quantity;
             return { cart: newCart };
           }
-          
+
           return { cart: [...state.cart, { ...item, id: Math.random().toString(36).substring(7) }] };
         });
 
@@ -113,7 +113,7 @@ export const useStore = create<AppState>()(
 
       removeFromCart: async (id) => {
         const state = get();
-        
+
         // Optimistic update
         set((state) => ({ cart: state.cart.filter((item) => item.id !== id) }));
 
@@ -132,7 +132,7 @@ export const useStore = create<AppState>()(
 
       updateQuantity: async (id, quantity) => {
         const state = get();
-        
+
         // Optimistic update
         set((state) => ({
           cart: state.cart.map((item) => (item.id === id ? { ...item, quantity } : item)),
@@ -189,7 +189,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'generation-flow-storage',
-      partialize: (state) => ({ cart: state.cart, user: state.user }),
+      partialize: (state) => ({ user: state.user }),
     }
   )
 );

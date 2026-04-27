@@ -5,6 +5,7 @@ import { Package, Truck, CheckCircle2, Clock, MapPin, ChevronRight, LogOut, Aler
 import { motion } from "framer-motion";
 import { useStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -33,44 +34,46 @@ export default function OrdersPage() {
 
   const handleLogout = () => {
     logout();
-    router.push("/");
+    signOut({
+      callbackUrl: "/login",
+    });
   };
 
   const getStatusInfo = (status: string) => {
     switch (status) {
-      case "DELIVERED": 
-        return { 
-          color: "text-green-400 bg-green-400/10 border-green-400/20", 
+      case "DELIVERED":
+        return {
+          color: "text-green-400 bg-green-400/10 border-green-400/20",
           icon: <CheckCircle2 size={16} />,
           text: "Delivered"
         };
-      case "SHIPPED": 
-        return { 
-          color: "text-brand-blue bg-brand-blue/10 border-brand-blue/20", 
+      case "SHIPPED":
+        return {
+          color: "text-brand-blue bg-brand-blue/10 border-brand-blue/20",
           icon: <Truck size={16} />,
           text: "Shipped"
         };
-      case "PENDING": 
-        return { 
-          color: "text-yellow-400 bg-yellow-400/10 border-yellow-400/20", 
+      case "PENDING":
+        return {
+          color: "text-yellow-400 bg-yellow-400/10 border-yellow-400/20",
           icon: <Clock size={16} />,
           text: "Processing"
         };
-      case "PAID": 
-        return { 
-          color: "text-green-500 bg-green-500/10 border-green-500/20", 
+      case "PAID":
+        return {
+          color: "text-green-500 bg-green-500/10 border-green-500/20",
           icon: <CheckCircle2 size={16} />,
           text: "Paid"
         };
-      case "CANCELLED": 
-        return { 
-          color: "text-red-400 bg-red-400/10 border-red-400/20", 
+      case "CANCELLED":
+        return {
+          color: "text-red-400 bg-red-400/10 border-red-400/20",
           icon: <AlertCircle size={16} />,
           text: "Cancelled"
         };
-      default: 
-        return { 
-          color: "text-muted-foreground bg-white/5 border-white/10", 
+      default:
+        return {
+          color: "text-muted-foreground bg-white/5 border-white/10",
           icon: <Clock size={16} />,
           text: status
         };
@@ -86,14 +89,14 @@ export default function OrdersPage() {
           <h1 className="text-4xl font-bold tracking-tight mb-2 text-gradient">My Orders</h1>
           <p className="text-muted-foreground">Manage your orders and track deliveries.</p>
         </div>
-        
+
         {user && (
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
               <p className="font-medium text-white">{user.name}</p>
               <p className="text-sm text-muted-foreground">{user.email}</p>
             </div>
-            <button 
+            <button
               onClick={handleLogout}
               className="p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-colors border border-white/10 text-muted-foreground hover:text-white flex items-center gap-2"
             >
@@ -128,9 +131,8 @@ export default function OrdersPage() {
                   key={order.id}
                   whileHover={{ scale: 1.02 }}
                   onClick={() => setSelectedOrder(order.id)}
-                  className={`glass p-5 rounded-2xl cursor-pointer transition-all ${
-                    selectedOrder === order.id ? "ring-2 ring-brand-purple border-transparent" : "hover:border-white/20"
-                  }`}
+                  className={`glass p-5 rounded-2xl cursor-pointer transition-all ${selectedOrder === order.id ? "ring-2 ring-brand-purple border-transparent" : "hover:border-white/20"
+                    }`}
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div>

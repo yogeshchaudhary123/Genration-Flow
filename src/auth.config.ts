@@ -7,11 +7,11 @@ export const authConfig = {
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-      
+
       const isApiRoute = nextUrl.pathname.startsWith("/api");
       const isAuthRoute = nextUrl.pathname.startsWith("/api/auth");
       const isPublicApiRoute = nextUrl.pathname.startsWith("/api/products") || nextUrl.pathname.startsWith("/api/ai/suggestions");
-      
+
       const protectedRoutes = ["/cart", "/checkout", "/orders", "/profile"];
       const isProtectedRoute = protectedRoutes.some((route) => nextUrl.pathname.startsWith(route));
 

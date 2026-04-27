@@ -3,7 +3,7 @@
 import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Filter, LayoutGrid, List as ListIcon, Star, ShoppingCart, Heart } from "lucide-react";
 import { categories } from "@/lib/mock-data";
@@ -17,7 +17,8 @@ function ProductsContent() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { addToCart } = useStore();
+  const router = useRouter();
+  const { addToCart, user } = useStore();
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -42,6 +43,10 @@ function ProductsContent() {
 
   const handleAddToCart = (e: React.MouseEvent, product: any) => {
     e.preventDefault();
+    if (!user) {
+      router.push("/login");
+      return;
+    }
     addToCart({
       productId: product.id,
       name: product.name,

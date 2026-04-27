@@ -2,7 +2,7 @@
 
 import { useState, use, useEffect } from "react";
 import Image from "next/image";
-import { notFound } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, Shield, Truck, Sparkles, ShoppingBag, Plus, Minus, Check, Bot } from "lucide-react";
 import { mockReviews } from "@/lib/mock-data";
@@ -18,7 +18,8 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
   const [quantity, setQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
 
-  const { addToCart, toggleAiChat } = useStore();
+  const router = useRouter();
+  const { addToCart, toggleAiChat, user } = useStore();
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -61,6 +62,10 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
   }
 
   const handleAddToCart = async () => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
     await addToCart({
       productId: product.id,
       name: product.name,
