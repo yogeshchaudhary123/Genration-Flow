@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Check, CreditCard, MapPin, Package, ArrowRight, ShieldCheck, Wallet } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
+import Script from "next/script";
+import { toast } from "react-hot-toast";
 
 const steps = [
   { id: 1, title: "Shipping Address", icon: MapPin },
@@ -17,24 +19,90 @@ export default function CheckoutPage() {
   const { cart, cartTotal, clearCart } = useStore();
   const router = useRouter();
 
+  const [shippingData, setShippingData] = useState({
+    firstName: "Alex",
+    lastName: "Carter",
+    address: "123 Neon Avenue, Cyber District",
+    city: "San Francisco",
+    zipCode: "94105"
+  });
+
+  const [paymentMethod, setPaymentMethod] = useState<"STRIPE" | "RAZORPAY">("STRIPE");
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const subtotal = cartTotal();
   const shipping = subtotal > 0 ? (subtotal > 500 ? 0 : 25) : 0;
   const tax = subtotal * 0.08;
   const total = subtotal + shipping + tax;
 
-  const [isProcessing, setIsProcessing] = useState(false);
-
   const handleNext = () => {
     if (currentStep < 3) setCurrentStep(currentStep + 1);
   };
 
-  const handlePlaceOrder = () => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setShippingData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePlaceOrder = async () => {
     setIsProcessing(true);
-    setTimeout(() => {
-      clearCart();
+    try {
+      const shippingAddress = `${shippingData.firstName} ${shippingData.lastName}, ${shippingData.address}, ${shippingData.city}, ${shippingData.zipCode}`;
+      
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shippingAddress,
+          paymentMethod
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Checkout failed");
+      }
+
+      if (paymentMethod === "STRIPE") {
+        // Redirect to Stripe or handle with Stripe Elements
+        // For simplicity in this demo, we'll assume we redirect or just show success
+        // In a real app: window.location.href = data.paymentData.checkoutUrl;
+        toast.success("Stripe Payment Initiated!");
+        setTimeout(() => {
+          clearCart();
+          router.push("/orders");
+        }, 2000);
+      } else if (paymentMethod === "RAZORPAY") {
+        const options = {
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+          amount: total * 100,
+          currency: "INR",
+          name: "Generation Flow",
+          description: "Order Payment",
+          order_id: data.paymentData.razorpayOrderId,
+          handler: function (response: any) {
+            toast.success("Payment Successful!");
+            clearCart();
+            router.push("/orders");
+          },
+          prefill: {
+            name: `${shippingData.firstName} ${shippingData.lastName}`,
+            email: "user@example.com",
+          },
+          theme: {
+            color: "#8B5CF6",
+          },
+        };
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+      }
+    } catch (error: any) {
+      toast.error(error.message);
+      console.error("Checkout Error:", error);
+    } finally {
       setIsProcessing(false);
-      router.push("/orders"); // In a real app, go to success page or orders
-    }, 2000);
+    }
   };
 
   if (cart.length === 0 && !isProcessing) {
@@ -44,6 +112,8 @@ export default function CheckoutPage() {
 
   return (
     <div className="container mx-auto px-4 py-24 max-w-6xl">
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" />
+      
       {/* Progress Indicator */}
       <div className="mb-12 relative">
         <div className="absolute top-1/2 left-0 w-full h-1 bg-white/10 -translate-y-1/2 rounded-full hidden md:block" />
@@ -90,23 +160,23 @@ export default function CheckoutPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm text-muted-foreground pl-1">First Name</label>
-                    <input type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-brand-purple transition-colors" defaultValue="Alex" />
+                    <input name="firstName" type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-brand-purple transition-colors" value={shippingData.firstName} onChange={handleInputChange} />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm text-muted-foreground pl-1">Last Name</label>
-                    <input type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-brand-purple transition-colors" defaultValue="Carter" />
+                    <input name="lastName" type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-brand-purple transition-colors" value={shippingData.lastName} onChange={handleInputChange} />
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-sm text-muted-foreground pl-1">Address</label>
-                    <input type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-brand-purple transition-colors" defaultValue="123 Neon Avenue, Cyber District" />
+                    <input name="address" type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-brand-purple transition-colors" value={shippingData.address} onChange={handleInputChange} />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm text-muted-foreground pl-1">City</label>
-                    <input type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-brand-purple transition-colors" defaultValue="San Francisco" />
+                    <input name="city" type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-brand-purple transition-colors" value={shippingData.city} onChange={handleInputChange} />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm text-muted-foreground pl-1">Zip Code</label>
-                    <input type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-brand-purple transition-colors" defaultValue="94105" />
+                    <input name="zipCode" type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-brand-purple transition-colors" value={shippingData.zipCode} onChange={handleInputChange} />
                   </div>
                 </div>
                 <button onClick={handleNext} className="w-full py-4 rounded-xl bg-brand-purple text-white font-medium mt-8 hover:bg-brand-purple/90 transition-colors">
@@ -126,43 +196,40 @@ export default function CheckoutPage() {
                 <h2 className="text-2xl font-bold mb-6">Payment Method</h2>
                 
                 <div className="grid grid-cols-1 gap-4 mb-8">
-                  <label className="relative p-4 border border-brand-purple bg-brand-purple/10 rounded-2xl cursor-pointer flex items-center justify-between">
+                  <label 
+                    onClick={() => setPaymentMethod("STRIPE")}
+                    className={`relative p-4 border rounded-2xl cursor-pointer flex items-center justify-between transition-all ${paymentMethod === "STRIPE" ? "border-brand-purple bg-brand-purple/10" : "border-white/10 bg-white/5"}`}
+                  >
                     <div className="flex items-center gap-4">
-                      <CreditCard size={24} className="text-brand-purple" />
+                      <CreditCard size={24} className={paymentMethod === "STRIPE" ? "text-brand-purple" : "text-white/70"} />
                       <div>
-                        <p className="font-semibold text-white">Credit Card</p>
-                        <p className="text-sm text-muted-foreground">Mastercard ending in 4242</p>
+                        <p className="font-semibold text-white">Stripe</p>
+                        <p className="text-sm text-muted-foreground">Secure global payments</p>
                       </div>
                     </div>
-                    <div className="w-5 h-5 rounded-full border-4 border-brand-purple" />
+                    <div className={`w-5 h-5 rounded-full border-4 ${paymentMethod === "STRIPE" ? "border-brand-purple" : "border-white/20"}`} />
                   </label>
                   
-                  <label className="relative p-4 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors rounded-2xl cursor-pointer flex items-center justify-between">
+                  <label 
+                    onClick={() => setPaymentMethod("RAZORPAY")}
+                    className={`relative p-4 border rounded-2xl cursor-pointer flex items-center justify-between transition-all ${paymentMethod === "RAZORPAY" ? "border-brand-purple bg-brand-purple/10" : "border-white/10 bg-white/5"}`}
+                  >
                     <div className="flex items-center gap-4">
-                      <Wallet size={24} className="text-white/70" />
+                      <Wallet size={24} className={paymentMethod === "RAZORPAY" ? "text-brand-purple" : "text-white/70"} />
                       <div>
-                        <p className="font-semibold text-white">UPI / Digital Wallet</p>
-                        <p className="text-sm text-muted-foreground">Google Pay, Apple Pay, etc.</p>
+                        <p className="font-semibold text-white">Razorpay</p>
+                        <p className="text-sm text-muted-foreground">UPI, Cards & Netbanking</p>
                       </div>
                     </div>
-                    <div className="w-5 h-5 rounded-full border-2 border-white/20" />
+                    <div className={`w-5 h-5 rounded-full border-4 ${paymentMethod === "RAZORPAY" ? "border-brand-purple" : "border-white/20"}`} />
                   </label>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm text-muted-foreground pl-1">Card Number</label>
-                    <input type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-brand-purple transition-colors" defaultValue="**** **** **** 4242" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground pl-1">Expiry Date</label>
-                      <input type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-brand-purple transition-colors" defaultValue="12/26" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground pl-1">CVC</label>
-                      <input type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-brand-purple transition-colors" defaultValue="***" />
-                    </div>
+                <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-start gap-4">
+                  <ShieldCheck size={24} className="text-green-400 shrink-0 mt-1" />
+                  <div>
+                    <h4 className="font-medium mb-1">Encrypted Payment</h4>
+                    <p className="text-sm text-muted-foreground">Your payment details are encrypted and never stored on our servers.</p>
                   </div>
                 </div>
 
@@ -195,18 +262,27 @@ export default function CheckoutPage() {
                       </div>
                       <div className="flex-1">
                         <h4 className="font-medium text-sm">{item.name}</h4>
-                        <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                        <p className="text-xs text-muted-foreground">Qty: {item.quantity} | {item.color} | {item.size}</p>
                       </div>
                       <div className="font-semibold">${(item.price * item.quantity).toFixed(2)}</div>
                     </div>
                   ))}
                 </div>
 
-                <div className="p-4 bg-white/5 rounded-2xl border border-white/10 mt-6 flex items-start gap-4">
-                  <ShieldCheck size={24} className="text-green-400 shrink-0 mt-1" />
-                  <div>
-                    <h4 className="font-medium mb-1">Secure Transaction</h4>
-                    <p className="text-sm text-muted-foreground">Your order is protected by enterprise-grade encryption. Generation Flow never stores your full card details.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                  <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                    <h4 className="text-sm text-muted-foreground mb-2 flex items-center gap-2 uppercase tracking-wider font-semibold">
+                      <MapPin size={14} /> Shipping
+                    </h4>
+                    <p className="text-sm">{shippingData.firstName} {shippingData.lastName}</p>
+                    <p className="text-sm text-muted-foreground">{shippingData.address}, {shippingData.city} {shippingData.zipCode}</p>
+                  </div>
+                  <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                    <h4 className="text-sm text-muted-foreground mb-2 flex items-center gap-2 uppercase tracking-wider font-semibold">
+                      <CreditCard size={14} /> Payment
+                    </h4>
+                    <p className="text-sm">{paymentMethod === "STRIPE" ? "Stripe" : "Razorpay"}</p>
+                    <p className="text-sm text-muted-foreground">Secure Payment Gateway</p>
                   </div>
                 </div>
 
@@ -217,12 +293,12 @@ export default function CheckoutPage() {
                   <button 
                     onClick={handlePlaceOrder} 
                     disabled={isProcessing}
-                    className="flex-1 py-4 rounded-xl bg-gradient-to-r from-brand-purple to-brand-blue text-white font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                    className="flex-1 py-4 rounded-xl bg-gradient-to-r from-brand-purple to-brand-blue text-white font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(139,92,246,0.3)]"
                   >
                     {isProcessing ? (
                       <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                     ) : (
-                      <>Place Order <ArrowRight size={18} /></>
+                      <>Pay & Place Order <ArrowRight size={18} /></>
                     )}
                   </button>
                 </div>

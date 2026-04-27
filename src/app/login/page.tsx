@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Bot, Mail, Lock, ArrowRight } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { motion } from "framer-motion";
+import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -14,16 +15,31 @@ export default function LoginPage() {
   const { login } = useStore();
   const router = useRouter();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      login({ id: "user_1", name: "Alex Carter", email });
-      setIsLoading(false);
+    try {
+      const signInRes = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (signInRes?.error) {
+        throw new Error("Invalid email or password");
+      }
+
+      // After successful login, update Zustand store
+      // In a full implementation we'd fetch user details here
+      login({ id: "user_session", name: email.split("@")[0], email });
       router.push("/");
-    }, 1500);
+    } catch (error) {
+      console.error(error);
+      alert(error instanceof Error ? error.message : "Something went wrong");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

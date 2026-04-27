@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Bot, Mail, Lock, ArrowRight, User } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { motion } from "framer-motion";
+import { signIn } from "next-auth/react";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -15,16 +16,42 @@ export default function RegisterPage() {
   const { login } = useStore();
   const router = useRouter();
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      login({ id: "user_1", name, email });
-      setIsLoading(false);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Registration failed");
+      }
+
+      const data = await res.json();
+      
+      const signInRes = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (signInRes?.error) {
+        throw new Error(signInRes.error);
+      }
+
+      login({ id: data.userId, name, email });
       router.push("/");
-    }, 1500);
+    } catch (error) {
+      console.error(error);
+      alert(error instanceof Error ? error.message : "Something went wrong");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

@@ -1,14 +1,34 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, Zap, Shield, Bot } from "lucide-react";
-import { mockProducts, categories } from "@/lib/mock-data";
+import { categories } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import Image from "next/image";
 
 export default function Home() {
   const { toggleAiChat } = useStore();
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch("/api/products?featured=true");
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setProducts(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -84,46 +104,59 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="flex gap-6 overflow-x-auto pb-8 scrollbar-thin scrollbar-thumb-black/10 dark:scrollbar-thumb-white/10 snap-x snap-mandatory">
-            {mockProducts.slice(0, 4).map((product, i) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, x: 50 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="min-w-[300px] md:min-w-[400px] snap-center glass rounded-3xl p-4 group cursor-pointer"
-              >
-                <div className="relative h-[250px] md:h-[300px] rounded-2xl overflow-hidden mb-4 bg-black/5 dark:bg-white/5">
-                  <Image
-                    src={product.image}
-                    alt={product.name}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                  {product.isNew && (
-                    <div className="absolute top-4 left-4 px-3 py-1 bg-brand-purple text-white text-xs font-bold rounded-full backdrop-blur-md">
-                      NEW
+          <div className="flex gap-6 overflow-x-auto pb-8 scrollbar-thin scrollbar-thumb-black/10 dark:scrollbar-thumb-white/10 snap-x snap-mandatory min-h-[400px]">
+            {loading ? (
+              <div className="w-full flex justify-center items-center">
+                <div className="w-12 h-12 border-4 border-brand-purple border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : products.length === 0 ? (
+              <div className="w-full text-center text-muted-foreground py-20">
+                No products found. Add some in the database to see them here!
+              </div>
+            ) : (
+              products.map((product, i) => (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, x: 50 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: i * 0.1 }}
+                  className="min-w-[300px] md:min-w-[400px] snap-center glass rounded-3xl p-4 group cursor-pointer"
+                >
+                  <div className="relative h-[250px] md:h-[300px] rounded-2xl overflow-hidden mb-4 bg-black/5 dark:bg-white/5">
+                    {product.images && (
+                      <Image
+                        src={product.images.split(',')[0]}
+                        alt={product.name}
+                        fill
+                        className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                    )}
+                    {product.isNew && (
+                      <div className="absolute top-4 left-4 px-3 py-1 bg-brand-purple text-white text-xs font-bold rounded-full backdrop-blur-md">
+                        NEW
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-white/90 dark:from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6">
+                      <Link href={`/products/${product.id}`} className="w-full py-3 bg-black/10 dark:bg-white/20 backdrop-blur-md text-foreground dark:text-white text-center rounded-xl font-medium hover:bg-black/20 dark:hover:bg-white/30 transition-colors">
+                        View Details
+                      </Link>
                     </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-white/90 dark:from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6">
-                    <Link href={`/products/${product.id}`} className="w-full py-3 bg-black/10 dark:bg-white/20 backdrop-blur-md text-foreground dark:text-white text-center rounded-xl font-medium hover:bg-black/20 dark:hover:bg-white/30 transition-colors">
-                      View Details
-                    </Link>
                   </div>
-                </div>
-                <div>
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-xl font-semibold">{product.name}</h3>
-                    <p className="font-medium text-lg">${product.price}</p>
+                  <div>
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="text-xl font-semibold">{product.name}</h3>
+                      <p className="font-medium text-lg">${product.price}</p>
+                    </div>
+                    <p className="text-muted-foreground text-sm line-clamp-2">{product.description}</p>
                   </div>
-                  <p className="text-muted-foreground text-sm line-clamp-2">{product.description}</p>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))
+            )}
           </div>
         </div>
       </section>
+
 
       {/* Categories Grid */}
       <section className="py-24">

@@ -1,80 +1,89 @@
 "use client";
 
-import { useState } from "react";
-import { Package, Truck, CheckCircle2, Clock, MapPin, ChevronRight, LogOut } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Package, Truck, CheckCircle2, Clock, MapPin, ChevronRight, LogOut, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { useStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 
-// Mock Data for Orders
-const mockOrders = [
-  {
-    id: "ORD-9482-FLOW",
-    date: "Oct 24, 2024",
-    status: "Delivered",
-    total: 3499.00,
-    items: [
-      { name: "Aura Vision Pro", qty: 1, image: "https://images.unsplash.com/photo-1622979135225-d2ba269cf1ac?auto=format&fit=crop&q=80&w=200" }
-    ],
-    tracking: [
-      { status: "Order Placed", date: "Oct 22, 10:00 AM", completed: true },
-      { status: "Processing", date: "Oct 22, 02:30 PM", completed: true },
-      { status: "Shipped", date: "Oct 23, 09:15 AM", completed: true },
-      { status: "Delivered", date: "Oct 24, 04:45 PM", completed: true },
-    ]
-  },
-  {
-    id: "ORD-7211-FLOW",
-    date: "Nov 02, 2024",
-    status: "In Transit",
-    total: 549.00,
-    items: [
-      { name: "SonicPods Max", qty: 1, image: "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?auto=format&fit=crop&q=80&w=200" }
-    ],
-    tracking: [
-      { status: "Order Placed", date: "Nov 02, 08:00 AM", completed: true },
-      { status: "Processing", date: "Nov 02, 11:30 AM", completed: true },
-      { status: "Shipped", date: "Nov 03, 10:00 AM", completed: true },
-      { status: "Out for Delivery", date: "Pending", completed: false },
-    ]
-  }
-];
-
 export default function OrdersPage() {
-  const [selectedOrder, setSelectedOrder] = useState<string | null>(mockOrders[1].id);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const { user, logout } = useStore();
   const router = useRouter();
 
-  // In a real app we'd redirect if no user, but since this is a frontend mock without strict auth boundaries:
-  // if (!user) router.push('/login');
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const res = await fetch("/api/orders");
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setOrders(data);
+          if (data.length > 0) setSelectedOrder(data[0].id);
+        }
+      } catch (error) {
+        console.error("Failed to fetch orders:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
+  }, []);
 
   const handleLogout = () => {
     logout();
     router.push("/");
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusInfo = (status: string) => {
     switch (status) {
-      case "Delivered": return "text-green-400 bg-green-400/10 border-green-400/20";
-      case "In Transit": return "text-brand-blue bg-brand-blue/10 border-brand-blue/20";
-      case "Processing": return "text-yellow-400 bg-yellow-400/10 border-yellow-400/20";
-      default: return "text-muted-foreground bg-white/5 border-white/10";
+      case "DELIVERED": 
+        return { 
+          color: "text-green-400 bg-green-400/10 border-green-400/20", 
+          icon: <CheckCircle2 size={16} />,
+          text: "Delivered"
+        };
+      case "SHIPPED": 
+        return { 
+          color: "text-brand-blue bg-brand-blue/10 border-brand-blue/20", 
+          icon: <Truck size={16} />,
+          text: "Shipped"
+        };
+      case "PENDING": 
+        return { 
+          color: "text-yellow-400 bg-yellow-400/10 border-yellow-400/20", 
+          icon: <Clock size={16} />,
+          text: "Processing"
+        };
+      case "PAID": 
+        return { 
+          color: "text-green-500 bg-green-500/10 border-green-500/20", 
+          icon: <CheckCircle2 size={16} />,
+          text: "Paid"
+        };
+      case "CANCELLED": 
+        return { 
+          color: "text-red-400 bg-red-400/10 border-red-400/20", 
+          icon: <AlertCircle size={16} />,
+          text: "Cancelled"
+        };
+      default: 
+        return { 
+          color: "text-muted-foreground bg-white/5 border-white/10", 
+          icon: <Clock size={16} />,
+          text: status
+        };
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "Delivered": return <CheckCircle2 size={16} />;
-      case "In Transit": return <Truck size={16} />;
-      default: return <Clock size={16} />;
-    }
-  };
+  const activeOrder = orders.find(o => o.id === selectedOrder);
 
   return (
     <div className="container mx-auto px-4 py-24 max-w-7xl">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-4">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight mb-2">My Orders</h1>
+          <h1 className="text-4xl font-bold tracking-tight mb-2 text-gradient">My Orders</h1>
           <p className="text-muted-foreground">Manage your orders and track deliveries.</p>
         </div>
         
@@ -95,122 +104,142 @@ export default function OrdersPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Orders List */}
-        <div className="lg:col-span-1 space-y-4">
-          {mockOrders.map((order) => (
-            <motion.div
-              key={order.id}
-              whileHover={{ scale: 1.02 }}
-              onClick={() => setSelectedOrder(order.id)}
-              className={`glass p-5 rounded-2xl cursor-pointer transition-all ${
-                selectedOrder === order.id ? "ring-2 ring-brand-purple border-transparent" : "hover:border-white/20"
-              }`}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="font-semibold text-white">{order.id}</h3>
-                  <p className="text-xs text-muted-foreground">{order.date}</p>
-                </div>
-                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium ${getStatusColor(order.status)}`}>
-                  {getStatusIcon(order.status)}
-                  {order.status}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-xl bg-white/5 overflow-hidden shrink-0">
-                  <img src={order.items[0].image} alt="Product" className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium line-clamp-1 mb-1">{order.items[0].name}</p>
-                  {order.items.length > 1 && (
-                    <p className="text-xs text-muted-foreground">+ {order.items.length - 1} more items</p>
-                  )}
-                  <p className="font-semibold mt-1">${order.total.toFixed(2)}</p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+      {loading ? (
+        <div className="flex justify-center items-center py-24">
+          <div className="w-12 h-12 border-4 border-brand-purple border-t-transparent rounded-full animate-spin" />
         </div>
-
-        {/* Order Details & Tracking */}
-        <div className="lg:col-span-2">
-          {selectedOrder ? (
-            <div className="glass rounded-3xl p-6 sm:p-8">
-              {mockOrders.filter(o => o.id === selectedOrder).map(order => (
-                <div key={order.id}>
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 pb-8 border-b border-white/10">
+      ) : orders.length === 0 ? (
+        <div className="glass rounded-3xl p-16 text-center">
+          <Package size={64} className="mx-auto text-muted-foreground/30 mb-6" />
+          <h2 className="text-2xl font-bold mb-4">No orders yet</h2>
+          <p className="text-muted-foreground mb-8">You haven't placed any orders yet. Start shopping to see them here!</p>
+          <button onClick={() => router.push("/products")} className="px-8 py-3 bg-brand-purple text-white rounded-full font-medium hover:bg-brand-purple/90 transition-colors">
+            Browse Products
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Orders List */}
+          <div className="lg:col-span-1 space-y-4">
+            {orders.map((order) => {
+              const statusInfo = getStatusInfo(order.status);
+              return (
+                <motion.div
+                  key={order.id}
+                  whileHover={{ scale: 1.02 }}
+                  onClick={() => setSelectedOrder(order.id)}
+                  className={`glass p-5 rounded-2xl cursor-pointer transition-all ${
+                    selectedOrder === order.id ? "ring-2 ring-brand-purple border-transparent" : "hover:border-white/20"
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h2 className="text-2xl font-bold mb-2">Order Details</h2>
-                      <p className="text-muted-foreground flex items-center gap-2">
-                        {order.id} <span className="w-1 h-1 rounded-full bg-white/20" /> {order.date}
-                      </p>
+                      <h3 className="font-semibold text-white">#{order.id.slice(-8).toUpperCase()}</h3>
+                      <p className="text-xs text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>
                     </div>
-                    <button className="px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium transition-colors text-sm flex items-center gap-2">
-                      Download Invoice <ChevronRight size={16} />
-                    </button>
+                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium ${statusInfo.color}`}>
+                      {statusInfo.icon}
+                      {statusInfo.text}
+                    </div>
                   </div>
 
-                  {/* Delivery Tracking */}
-                  <div className="mb-12">
-                    <h3 className="font-semibold text-lg mb-6 flex items-center gap-2">
-                      <MapPin size={20} className="text-brand-purple" /> Tracking Status
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-xl bg-white/5 overflow-hidden shrink-0">
+                      <img src={order.items[0]?.product?.images?.split(',')[0]} alt="Product" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium line-clamp-1 mb-1">{order.items[0]?.product?.name}</p>
+                      {order.items.length > 1 && (
+                        <p className="text-xs text-muted-foreground">+ {order.items.length - 1} more items</p>
+                      )}
+                      <p className="font-semibold mt-1">${order.totalAmount.toFixed(2)}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Order Details & Tracking */}
+          <div className="lg:col-span-2">
+            {activeOrder ? (
+              <div className="glass rounded-3xl p-6 sm:p-8">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 pb-8 border-b border-white/10">
+                  <div>
+                    <h2 className="text-2xl font-bold mb-2">Order Details</h2>
+                    <p className="text-muted-foreground flex items-center gap-2">
+                      #{activeOrder.id.toUpperCase()} <span className="w-1 h-1 rounded-full bg-white/20" /> {new Date(activeOrder.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <button className="px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium transition-colors text-sm flex items-center gap-2">
+                    Download Invoice <ChevronRight size={16} />
+                  </button>
+                </div>
+
+                {/* Delivery Info */}
+                <div className="mb-12 grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div>
+                    <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                      <MapPin size={20} className="text-brand-purple" /> Shipping Address
                     </h3>
-                    
-                    <div className="relative">
-                      {/* Tracking Line */}
-                      <div className="absolute left-4 top-2 bottom-2 w-0.5 bg-white/10" />
-                      
-                      <div className="space-y-8 relative z-10">
-                        {order.tracking.map((track, idx) => (
-                          <div key={idx} className="flex gap-6">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                              track.completed 
-                                ? "bg-brand-purple text-white shadow-[0_0_15px_rgba(139,92,246,0.3)]" 
-                                : "bg-background border-2 border-white/20 text-muted-foreground"
-                            }`}>
-                              {track.completed ? <CheckCircle2 size={16} /> : <div className="w-2 h-2 rounded-full bg-white/20" />}
-                            </div>
-                            <div className="pt-1">
-                              <p className={`font-medium ${track.completed ? "text-white" : "text-muted-foreground"}`}>{track.status}</p>
-                              <p className="text-sm text-muted-foreground">{track.date}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{activeOrder.shippingAddress}</p>
                     </div>
                   </div>
-
-                  {/* Items list */}
-                  <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                    <Package size={20} className="text-brand-blue" /> Ordered Items
-                  </h3>
-                  <div className="space-y-4">
-                    {order.items.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-4 py-4 bg-white/5 rounded-2xl px-4 border border-white/5">
-                        <div className="w-16 h-16 rounded-lg overflow-hidden bg-background">
-                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium">{item.name}</h4>
-                          <p className="text-sm text-muted-foreground">Qty: {item.qty}</p>
-                        </div>
-                      </div>
-                    ))}
+                  <div>
+                    <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                      <Clock size={20} className="text-brand-blue" /> Order Status
+                    </h3>
+                    <div className={`p-4 rounded-2xl border ${getStatusInfo(activeOrder.status).color}`}>
+                      <p className="font-bold">{getStatusInfo(activeOrder.status).text}</p>
+                      <p className="text-sm opacity-80 mt-1">Updated on {new Date(activeOrder.updatedAt).toLocaleDateString()}</p>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="glass rounded-3xl p-12 text-center flex flex-col items-center justify-center h-full min-h-[400px]">
-              <Package size={64} className="text-muted-foreground/30 mb-6" />
-              <h3 className="text-xl font-bold mb-2">Select an order</h3>
-              <p className="text-muted-foreground">Click on an order from the list to view its details and tracking information.</p>
-            </div>
-          )}
+
+                {/* Items list */}
+                <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                  <Package size={20} className="text-brand-pink" /> Ordered Items
+                </h3>
+                <div className="space-y-4">
+                  {activeOrder.items.map((item: any, idx: number) => (
+                    <div key={idx} className="flex items-center gap-4 py-4 bg-white/5 rounded-2xl px-4 border border-white/5">
+                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-background">
+                        <img src={item.product?.images?.split(',')[0]} alt={item.product?.name} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.product?.name}</h4>
+                        <p className="text-sm text-muted-foreground">Qty: {item.quantity} | {item.color} | {item.size}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">${item.price.toFixed(2)} each</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-8 pt-8 border-t border-white/10 flex justify-between items-end">
+                  <div>
+                    <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold mb-1">Payment Method</p>
+                    <p className="font-medium uppercase">{activeOrder.payment?.method || "Unknown"}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold mb-1">Total Amount</p>
+                    <p className="text-3xl font-bold text-brand-purple">${activeOrder.totalAmount.toFixed(2)}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="glass rounded-3xl p-12 text-center flex flex-col items-center justify-center h-full min-h-[400px]">
+                <Package size={64} className="text-muted-foreground/30 mb-6" />
+                <h3 className="text-xl font-bold mb-2">Select an order</h3>
+                <p className="text-muted-foreground">Click on an order from the list to view its details and tracking information.</p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

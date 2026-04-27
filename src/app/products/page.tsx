@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Filter, LayoutGrid, List as ListIcon, Star, ShoppingCart, Heart } from "lucide-react";
-import { mockProducts, categories, Product } from "@/lib/mock-data";
+import { categories } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 
 function ProductsContent() {
@@ -15,22 +15,41 @@ function ProductsContent() {
   
   const [activeCategory, setActiveCategory] = useState<string | null>(initialCategory);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const { addToCart } = useStore();
 
-  const filteredProducts = activeCategory
-    ? mockProducts.filter((p) => p.category === activeCategory)
-    : mockProducts;
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const url = activeCategory 
+          ? `/api/products?category=${activeCategory}` 
+          : "/api/products";
+        const res = await fetch(url);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setProducts(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, [activeCategory]);
 
-  const handleAddToCart = (e: React.MouseEvent, product: Product) => {
+  const handleAddToCart = (e: React.MouseEvent, product: any) => {
     e.preventDefault();
     addToCart({
       productId: product.id,
       name: product.name,
       price: product.price,
       quantity: 1,
-      image: product.image,
-      color: product.variants.color?.[0],
-      size: product.variants.size?.[0],
+      image: product.images.split(',')[0],
+      color: product.colors?.split(',')[0] || "",
+      size: product.sizes?.split(',')[0] || "",
     });
   };
 
@@ -89,7 +108,7 @@ function ProductsContent() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <h1 className="text-3xl font-bold">
               {activeCategory ? categories.find(c => c.id === activeCategory)?.name : "All Products"}
-              <span className="text-muted-foreground text-lg ml-2 font-normal">({filteredProducts.length})</span>
+              <span className="text-muted-foreground text-lg ml-2 font-normal">({products.length})</span>
             </h1>
 
             <div className="flex items-center gap-2 bg-black/5 dark:bg-white/5 p-1 rounded-xl border border-black/10 dark:border-white/10">
@@ -109,12 +128,16 @@ function ProductsContent() {
           </div>
 
           {/* Product Grid/List */}
-          {filteredProducts.length > 0 ? (
+          {loading ? (
+            <div className="flex justify-center items-center py-24">
+              <div className="w-12 h-12 border-4 border-brand-purple border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : products.length > 0 ? (
             <div className={viewMode === "grid" 
               ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6" 
               : "flex flex-col gap-6"
             }>
-              {filteredProducts.map((product, i) => (
+              {products.map((product, i) => (
                 <Link href={`/products/${product.id}`} key={product.id}>
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -124,7 +147,7 @@ function ProductsContent() {
                   >
                     <div className={`relative rounded-2xl overflow-hidden bg-black/5 dark:bg-white/5 shrink-0 ${viewMode === "list" ? "w-48 h-48" : "w-full aspect-[4/3] mb-4"}`}>
                       <Image
-                        src={product.image}
+                        src={product.images.split(',')[0]}
                         alt={product.name}
                         fill
                         className="object-cover transition-transform duration-700 group-hover:scale-105"

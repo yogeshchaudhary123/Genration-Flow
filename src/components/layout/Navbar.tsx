@@ -11,11 +11,13 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const cartCount = useStore((state) => state.cartCount());
   const user = useStore((state) => state.user);
 
   useEffect(() => {
+    setMounted(true);
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
@@ -84,7 +86,7 @@ export function Navbar() {
           
           <Link href="/cart" className="p-2 text-muted-foreground hover:text-foreground transition-colors relative">
             <ShoppingBag size={20} />
-            {cartCount > 0 && (
+            {mounted && cartCount > 0 && (
               <motion.span
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
