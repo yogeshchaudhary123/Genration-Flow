@@ -2,6 +2,7 @@ import { stripe } from "@/lib/payments/stripe";
 import { razorpay } from "@/lib/payments/razorpay";
 import prisma from "@/lib/db/prisma";
 import crypto from "crypto";
+import { logger } from "@/lib/logger";
 
 export class PaymentService {
   static async createStripeCheckoutSession(orderId: string, amount: number, successUrl: string, cancelUrl: string, idempotencyKey?: string) {
@@ -63,42 +64,55 @@ export class PaymentService {
     return rzpOrder;
   }
 
-  static async verifyStripePayment(transactionId: string) {
+  static async verifyStripePayment(transactionId: string, orderId?: string) {
+    let payment;
+
+    // 1. Try finding by orderId if provided (most reliable)
+    if (orderId) {
+      payment = await prisma.payment.findUnique({
+        where: { orderId },
+      });
+    }
+
+    // 2. If not found by orderId, try transactionId
+    if (!payment) {
+      payment = await prisma.payment.findUnique({
+        where: { transactionId },
+      });
+    }
+
+    if (!payment) {
+      logger.error(`Payment not found for orderId: ${orderId}, transactionId: ${transactionId}`);
+      throw new Error("Payment record not found");
+    }
+
+    // If it's already completed, just return true
+    if (payment.status === "COMPLETED") return true;
+
+    // Double check with Stripe for security
     if (transactionId.startsWith("cs_")) {
       const session = await stripe.checkout.sessions.retrieve(transactionId);
-      if (session.payment_status === "paid") {
-        const payment = await prisma.payment.update({
-          where: { transactionId },
-          data: { status: "COMPLETED" },
-        });
-
-        await prisma.order.update({
-          where: { id: payment.orderId },
-          data: { status: "PAID" },
-        });
-
-        return true;
-      }
-      return false;
+      if (session.payment_status !== "paid") return false;
+    } else {
+      const paymentIntent = await stripe.paymentIntents.retrieve(transactionId);
+      if (paymentIntent.status !== "succeeded") return false;
     }
 
-    const paymentIntent = await stripe.paymentIntents.retrieve(transactionId);
+    // Update payment and order status
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: "COMPLETED",
+        transactionId: transactionId, // Store the latest identifier (e.g. pi_...)
+      },
+    });
 
-    if (paymentIntent.status === "succeeded") {
-      const payment = await prisma.payment.update({
-        where: { transactionId },
-        data: { status: "COMPLETED" },
-      });
+    await prisma.order.update({
+      where: { id: payment.orderId },
+      data: { status: "PAID" },
+    });
 
-      await prisma.order.update({
-        where: { id: payment.orderId },
-        data: { status: "PAID" },
-      });
-
-      return true;
-    }
-
-    return false;
+    return true;
   }
 
   static async verifyRazorpayPayment(

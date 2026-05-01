@@ -33,7 +33,7 @@ export async function POST(req: Request) {
       const session = event.data.object as any;
 
       const orderId = session.metadata?.orderId;
-      const transactionId = session.payment_intent;
+      const transactionId = session.payment_intent || session.id;
 
       logger.info(`✅ Checkout completed for order ${orderId}`);
 
@@ -42,14 +42,15 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Missing orderId" }, { status: 400 });
       }
 
-      await PaymentService.verifyStripePayment(transactionId);
+      await PaymentService.verifyStripePayment(transactionId, orderId);
     }
     else if (event.type === "payment_intent.succeeded") {
       const paymentIntent = event.data.object as any;
       const transactionId = paymentIntent.id;
+      const orderId = paymentIntent.metadata?.orderId;
 
-      logger.info(`Stripe PaymentIntent ${transactionId} succeeded. Verifying...`);
-      await PaymentService.verifyStripePayment(transactionId);
+      logger.info(`Stripe PaymentIntent ${transactionId} succeeded for order ${orderId}. Verifying...`);
+      await PaymentService.verifyStripePayment(transactionId, orderId);
     } else if (event.type === "payment_intent.payment_failed") {
       logger.warn(`Stripe PaymentIntent failed: ${event.data.object.id}`);
       // Handle failure logic if necessary
