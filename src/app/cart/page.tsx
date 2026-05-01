@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -7,16 +8,30 @@ import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Shield } from "lucide-rea
 import { useStore } from "@/lib/store";
 
 export default function CartPage() {
+  const [mounted, setMounted] = useState(false);
   const { cart, removeFromCart, updateQuantity, cartTotal } = useStore();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const subtotal = cartTotal();
   const shipping = subtotal > 0 ? (subtotal > 500 ? 0 : 25) : 0;
   const tax = subtotal * 0.08; // 8% dummy tax
   const total = subtotal + shipping + tax;
 
+  if (!mounted) {
+    return (
+      <div className="container mx-auto px-4 py-24 min-h-[70vh] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-brand-purple border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   if (cart.length === 0) {
     return (
       <div className="container mx-auto px-4 py-32 flex flex-col items-center justify-center text-center min-h-[70vh]">
-        <div className="w-48 h-48 bg-white/5 rounded-full flex items-center justify-center mb-8 relative">
+        <div className="w-48 h-48 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center mb-8 relative">
           <div className="absolute inset-0 bg-brand-purple/20 blur-3xl rounded-full" />
           <ShoppingBag size={80} className="text-brand-purple opacity-50 relative z-10" />
         </div>
@@ -52,7 +67,7 @@ export default function CartPage() {
                 transition={{ duration: 0.3 }}
                 className="glass rounded-3xl p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-6"
               >
-                <div className="relative w-full sm:w-32 h-32 rounded-2xl bg-white/5 overflow-hidden shrink-0">
+                <div className="relative w-full sm:w-32 h-32 rounded-2xl bg-black/5 dark:bg-white/5 overflow-hidden shrink-0">
                   <Image src={item.image} alt={item.name} fill className="object-cover" />
                 </div>
 
@@ -73,17 +88,17 @@ export default function CartPage() {
                   </div>
 
                   <div className="flex items-center justify-between mt-auto">
-                    <div className="flex items-center gap-3 bg-white/5 p-1 rounded-xl border border-white/10">
+                    <div className="flex items-center gap-3 bg-black/5 dark:bg-white/5 p-1 rounded-xl border border-black/10 dark:border-white/10">
                       <button
                         onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
-                        className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-muted-foreground"
+                        className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors text-muted-foreground"
                       >
                         <Minus size={16} />
                       </button>
                       <span className="w-6 text-center font-medium">{item.quantity}</span>
                       <button
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-muted-foreground"
+                        className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors text-muted-foreground"
                       >
                         <Plus size={16} />
                       </button>
@@ -104,19 +119,19 @@ export default function CartPage() {
             <div className="space-y-4 mb-6 text-muted-foreground">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span className="text-white">${subtotal.toFixed(2)}</span>
+                <span className="text-foreground">${subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Estimated Tax (8%)</span>
-                <span className="text-white">${tax.toFixed(2)}</span>
+                <span className="text-foreground">${tax.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Shipping</span>
-                <span className="text-white">{shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}</span>
+                <span className="text-foreground">{shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}</span>
               </div>
             </div>
 
-            <div className="h-px w-full bg-white/10 mb-6" />
+            <div className="h-px w-full bg-black/10 dark:bg-white/10 mb-6" />
 
             <div className="flex justify-between items-center mb-8">
               <span className="text-xl font-bold">Total</span>

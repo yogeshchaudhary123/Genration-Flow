@@ -14,7 +14,7 @@ const checkoutSchema = z.object({
 
 export async function POST(req: Request) {
   const ip = getIp(req);
-  const { success } = rateLimit(ip, 5, 60000); // Max 5 checkouts per minute
+  const { success } = rateLimit(ip, 5, 60000, "checkout"); // Max 5 checkouts per minute
 
   if (!success) {
     logger.warn(`Rate limit exceeded for checkout from IP: ${ip}`);
@@ -39,13 +39,27 @@ export async function POST(req: Request) {
 
     // 2. Initiate payment based on method
     let paymentData;
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const successUrl = `${baseUrl}/orders?success=true`;
+    const cancelUrl = `${baseUrl}/cart?canceled=true`;
+
     if (paymentMethod === "STRIPE") {
-      const intent = await PaymentService.createStripePaymentIntent(order.id, order.totalAmount, idempotencyKey);
-      paymentData = { clientSecret: intent.client_secret, type: "STRIPE" };
-      logger.info(`Stripe payment intent created for order ${order.id}`);
+      const session = await PaymentService.createStripeCheckoutSession(order.id, order.totalAmount, successUrl, cancelUrl, idempotencyKey);
+      paymentData = { url: session.url, type: "STRIPE" };
+      logger.info(`Stripe checkout session created for order ${order.id}`);
     } else {
-      const razorOrder = await PaymentService.createRazorpayOrder(order.id, order.totalAmount);
-      paymentData = { razorpayOrderId: razorOrder.id, type: "RAZORPAY" };
+      // Razorpay uses a modal on the frontend — we create an Order server-side
+      // and return the details so the frontend SDK can open the checkout popup.
+      const rzpOrder = await PaymentService.createRazorpayOrder(order.id, order.totalAmount);
+      paymentData = {
+        type: "RAZORPAY",
+        razorpayOrderId: rzpOrder.id,
+        amount: rzpOrder.amount,          // in paisa
+        currency: rzpOrder.currency,
+        key: process.env.RAZORPAY_KEY,
+        orderId: order.id,                // our DB order id for verification
+        successUrl,
+      };
       logger.info(`Razorpay order created for order ${order.id}`);
     }
 

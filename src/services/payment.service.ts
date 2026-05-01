@@ -4,10 +4,24 @@ import prisma from "@/lib/db/prisma";
 import crypto from "crypto";
 
 export class PaymentService {
-  static async createStripePaymentIntent(orderId: string, amount: number, idempotencyKey?: string) {
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Stripe expects cents
-      currency: "inr",
+  static async createStripeCheckoutSession(orderId: string, amount: number, successUrl: string, cancelUrl: string, idempotencyKey?: string) {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'USD',
+            product_data: {
+              name: `Order #${orderId}`,
+            },
+            unit_amount: Math.round(amount * 100),
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       metadata: { orderId },
     }, idempotencyKey ? { idempotencyKey } : undefined);
 
@@ -16,19 +30,24 @@ export class PaymentService {
         orderId,
         amount,
         method: "STRIPE",
-        transactionId: paymentIntent.id,
+        transactionId: session.id,
         status: "PENDING",
       },
     });
 
-    return paymentIntent;
+    return session;
   }
 
   static async createRazorpayOrder(orderId: string, amount: number) {
-    const razorpayOrder = await razorpay.orders.create({
-      amount: Math.round(amount * 100), // Razorpay expects paise
+    // Razorpay works via an Order + frontend modal, NOT a redirect like Stripe.
+    // amount is in USD; convert to INR paisa (1 USD ≈ 83 INR, adjust as needed).
+    const amountInPaisa = Math.round(amount * 83 * 100);
+
+    const rzpOrder = await razorpay.orders.create({
+      amount: amountInPaisa,
       currency: "INR",
       receipt: orderId,
+      notes: { orderId },
     });
 
     await prisma.payment.create({
@@ -36,15 +55,33 @@ export class PaymentService {
         orderId,
         amount,
         method: "RAZORPAY",
-        transactionId: razorpayOrder.id,
+        transactionId: rzpOrder.id,
         status: "PENDING",
       },
     });
 
-    return razorpayOrder;
+    return rzpOrder;
   }
 
   static async verifyStripePayment(transactionId: string) {
+    if (transactionId.startsWith("cs_")) {
+      const session = await stripe.checkout.sessions.retrieve(transactionId);
+      if (session.payment_status === "paid") {
+        const payment = await prisma.payment.update({
+          where: { transactionId },
+          data: { status: "COMPLETED" },
+        });
+
+        await prisma.order.update({
+          where: { id: payment.orderId },
+          data: { status: "PAID" },
+        });
+
+        return true;
+      }
+      return false;
+    }
+
     const paymentIntent = await stripe.paymentIntents.retrieve(transactionId);
 
     if (paymentIntent.status === "succeeded") {
@@ -64,26 +101,31 @@ export class PaymentService {
     return false;
   }
 
-  static async verifyRazorpayPayment(orderId: string, paymentId: string, signature: string) {
-    const secret = process.env.RAZORPAY_KEY_SECRET;
-    
+  static async verifyRazorpayPayment(
+    razorpayOrderId: string,
+    razorpayPaymentId: string,
+    signature: string
+  ) {
+    const secret = process.env.RAZORPAY_SECRET;
+
     if (!secret) {
       throw new Error("Razorpay secret not configured");
     }
 
-    const hmac = crypto.createHmac('sha256', secret);
-    hmac.update(`${orderId}|${paymentId}`);
-    const generated_signature = hmac.digest('hex');
+    // Razorpay signature = HMAC-SHA256 of "razorpay_order_id|razorpay_payment_id"
+    const hmac = crypto.createHmac("sha256", secret);
+    hmac.update(`${razorpayOrderId}|${razorpayPaymentId}`);
+    const generated_signature = hmac.digest("hex");
 
     if (generated_signature !== signature) {
       throw new Error("Invalid payment signature");
     }
 
-    // Update payment record
+    // transactionId stores the razorpay order id (set during createRazorpayOrder)
     const payment = await prisma.payment.update({
-      where: { transactionId: orderId },
+      where: { transactionId: razorpayOrderId },
       data: {
-        paymentId,
+        paymentId: razorpayPaymentId,
         signature,
         status: "COMPLETED",
       },

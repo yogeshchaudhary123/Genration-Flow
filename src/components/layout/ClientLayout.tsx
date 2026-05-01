@@ -5,6 +5,7 @@ import { Footer } from "./Footer";
 import { FloatingAIChat } from "../chat/FloatingAIChat";
 import { Toaster } from "react-hot-toast";
 import { SessionProvider } from "next-auth/react";
+import { CartDrawer } from "./CartDrawer";
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -16,6 +17,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       </div>
       <Footer />
       <FloatingAIChat />
+      <CartDrawer />
     </SessionProvider>
   );
 }

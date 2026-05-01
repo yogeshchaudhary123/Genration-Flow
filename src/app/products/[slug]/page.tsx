@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Star, Shield, Truck, Sparkles, ShoppingBag, Plus, Minus, Check, Bot } from "lucide-react";
 import { mockReviews } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
+import { toast } from "react-hot-toast";
+import { ProductDetailSkeleton } from "@/components/products/ProductSkeleton";
 
 export default function ProductDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = use(params);
@@ -54,7 +56,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
   }, [resolvedParams.slug]);
 
   if (loading) {
-    return <div className="container mx-auto px-4 py-24 text-center">Loading product details...</div>;
+    return <ProductDetailSkeleton />;
   }
 
   if (!product) {
@@ -76,6 +78,8 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
       size: selectedSize,
     });
 
+    toast.success(`${product.name} added to cart!`);
+    useStore.getState().toggleCart(true);
     setIsAdded(true);
     setTimeout(() => setIsAdded(false), 2000);
   };

@@ -5,9 +5,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Filter, LayoutGrid, List as ListIcon, Star, ShoppingCart, Heart } from "lucide-react";
+import { Filter, LayoutGrid, List as ListIcon, Star, ShoppingCart, Heart, Loader2, Check } from "lucide-react";
 import { categories } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
+import { toast } from "react-hot-toast";
+import { ProductGridSkeleton } from "@/components/products/ProductSkeleton";
 
 function ProductsContent() {
   const searchParams = useSearchParams();
@@ -17,6 +19,8 @@ function ProductsContent() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingProductId, setLoadingProductId] = useState<string | null>(null);
+  const [addedProductId, setAddedProductId] = useState<string | null>(null);
   const router = useRouter();
   const { addToCart, user } = useStore();
 
@@ -41,21 +45,38 @@ function ProductsContent() {
     fetchProducts();
   }, [activeCategory]);
 
-  const handleAddToCart = (e: React.MouseEvent, product: any) => {
+  const handleAddToCart = async (e: React.MouseEvent, product: any) => {
     e.preventDefault();
     if (!user) {
       router.push("/login");
       return;
     }
-    addToCart({
-      productId: product.id,
-      name: product.name,
-      price: product.price,
-      quantity: 1,
-      image: product.images.split(',')[0],
-      color: product.colors?.split(',')[0] || "",
-      size: product.sizes?.split(',')[0] || "",
-    });
+    if (loadingProductId) return; // prevent double-tap
+    setLoadingProductId(product.id);
+    try {
+      // Trigger background sync (non-optimistic now)
+      await addToCart({
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        quantity: 1,
+        image: product.images.split(',')[0],
+        color: product.colors?.split(',')[0] || "",
+        size: product.sizes?.split(',')[0] || "",
+      });
+
+      // Show success feedback and open drawer ONLY after server confirms
+      toast.success(`${product.name} added to cart!`);
+      useStore.getState().toggleCart(true);
+      
+      setAddedProductId(product.id);
+      setTimeout(() => setAddedProductId(null), 1500);
+    } catch (error) {
+      console.error("Failed to add to cart:", error);
+      toast.error("Failed to add item to cart");
+    } finally {
+      setLoadingProductId(null);
+    }
   };
 
   return (
@@ -134,9 +155,7 @@ function ProductsContent() {
 
           {/* Product Grid/List */}
           {loading ? (
-            <div className="flex justify-center items-center py-24">
-              <div className="w-12 h-12 border-4 border-brand-purple border-t-transparent rounded-full animate-spin" />
-            </div>
+            <ProductGridSkeleton viewMode={viewMode} count={6} />
           ) : products.length > 0 ? (
             <div className={viewMode === "grid" 
               ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6" 
@@ -184,13 +203,26 @@ function ProductsContent() {
                       )}
 
                       <div className="mt-auto pt-4 flex gap-2">
-                        <button 
+                        <motion.button 
                           onClick={(e) => handleAddToCart(e, product)}
-                          className="flex-1 py-2.5 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors text-sm"
+                          disabled={loadingProductId === product.id}
+                          whileTap={{ scale: 0.97 }}
+                          className={`flex-1 py-2.5 border rounded-xl font-medium flex items-center justify-center gap-2 transition-all text-sm ${
+                            addedProductId === product.id
+                              ? "bg-green-500/20 border-green-500/40 text-green-500"
+                              : loadingProductId === product.id
+                              ? "bg-brand-purple/10 border-brand-purple/30 text-brand-purple cursor-wait"
+                              : "bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border-black/10 dark:border-white/10"
+                          }`}
                         >
-                          <ShoppingCart size={16} />
-                          Add to Cart
-                        </button>
+                          {addedProductId === product.id ? (
+                            <><Check size={16} className="text-green-500" /> Added!</>
+                          ) : loadingProductId === product.id ? (
+                            <><Loader2 size={16} className="animate-spin" /> Adding...</>
+                          ) : (
+                            <><ShoppingCart size={16} /> Add to Cart</>
+                          )}
+                        </motion.button>
                       </div>
                     </div>
                   </motion.div>

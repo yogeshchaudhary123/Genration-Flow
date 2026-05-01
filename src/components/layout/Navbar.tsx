@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingBag, User, Search, Menu, X, Bot } from "lucide-react";
+import { ShoppingBag, User, Search, Menu, X, Bot, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useStore } from "@/lib/store";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,8 +14,9 @@ export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
-  const cartCount = useStore((state) => state.cartCount());
+  const cartCount = useStore((state) => state.cart.reduce((n, i) => n + i.quantity, 0));
   const user = useStore((state) => state.user);
+  const isSyncing = useStore((state) => state.isSyncing);
 
   const { data: session, status } = useSession();
   const login = useStore((state) => state.login);
@@ -101,18 +102,30 @@ export function Navbar() {
             <User size={20} />
           </Link>
           
-          <Link href="/cart" className="p-2 text-muted-foreground hover:text-foreground transition-colors relative">
-            <ShoppingBag size={20} />
+          <button 
+            onClick={() => useStore.getState().toggleCart(true)}
+            className="p-2 text-muted-foreground hover:text-foreground transition-colors relative group"
+          >
+            <div className="relative">
+              <ShoppingBag size={20} className={isSyncing ? "opacity-20 transition-opacity" : "transition-opacity"} />
+              {isSyncing && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Loader2 size={16} className="animate-spin text-brand-purple" />
+                </div>
+              )}
+            </div>
             {mounted && cartCount > 0 && (
               <motion.span
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute top-0 right-0 w-4 h-4 bg-brand-pink text-[10px] font-bold flex items-center justify-center rounded-full text-white"
+                key={cartCount}
+                initial={{ scale: 0, y: -4 }}
+                animate={{ scale: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 500, damping: 20 }}
+                className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-brand-pink text-[10px] font-bold flex items-center justify-center rounded-full text-white leading-none shadow-sm z-10"
               >
-                {cartCount}
+                {cartCount > 99 ? "99+" : cartCount}
               </motion.span>
             )}
-          </Link>
+          </button>
 
           {/* Mobile Menu Button */}
           <button

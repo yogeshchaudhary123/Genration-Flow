@@ -8,17 +8,18 @@ const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
  * @param windowMs Window size in milliseconds
  * @returns Object indicating if request is allowed
  */
-export const rateLimit = (ip: string, limit = 100, windowMs = 60000) => {
+export const rateLimit = (ip: string, limit = 100, windowMs = 60000, namespace = "global") => {
+  const key = `${namespace}:${ip}`;
   const now = Date.now();
-  const windowData = rateLimitMap.get(ip);
+  const windowData = rateLimitMap.get(key);
 
   if (!windowData) {
-    rateLimitMap.set(ip, { count: 1, lastReset: now });
+    rateLimitMap.set(key, { count: 1, lastReset: now });
     return { success: true };
   }
 
   if (now - windowData.lastReset > windowMs) {
-    rateLimitMap.set(ip, { count: 1, lastReset: now });
+    rateLimitMap.set(key, { count: 1, lastReset: now });
     return { success: true };
   }
 

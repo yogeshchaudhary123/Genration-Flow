@@ -6,7 +6,7 @@ import { rateLimit, getIp } from "@/lib/rate-limit";
 
 export async function GET(req: Request) {
   const ip = getIp(req);
-  if (!rateLimit(ip, 100, 60000).success) {
+  if (!rateLimit(ip, 100, 60000, "cart_get").success) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
@@ -32,7 +32,7 @@ const addToCartSchema = z.object({
 
 export async function POST(req: Request) {
   const ip = getIp(req);
-  if (!rateLimit(ip, 50, 60000).success) {
+  if (!rateLimit(ip, 50, 60000, "cart_post").success) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   const ip = getIp(req);
-  if (!rateLimit(ip, 50, 60000).success) {
+  if (!rateLimit(ip, 50, 60000, "cart_patch").success) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
@@ -76,7 +76,7 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
   const ip = getIp(req);
-  if (!rateLimit(ip, 50, 60000).success) {
+  if (!rateLimit(ip, 50, 60000, "cart_delete").success) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 

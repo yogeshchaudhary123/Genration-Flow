@@ -7,6 +7,7 @@ import { ArrowRight, Sparkles, Zap, Shield, Bot } from "lucide-react";
 import { categories } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import Image from "next/image";
+import { ProductGridSkeleton } from "@/components/products/ProductSkeleton";
 
 export default function Home() {
   const { toggleAiChat } = useStore();
@@ -106,8 +107,21 @@ export default function Home() {
 
           <div className="flex gap-6 overflow-x-auto pb-8 scrollbar-thin scrollbar-thumb-black/10 dark:scrollbar-thumb-white/10 snap-x snap-mandatory min-h-[400px]">
             {loading ? (
-              <div className="w-full flex justify-center items-center">
-                <div className="w-12 h-12 border-4 border-brand-purple border-t-transparent rounded-full animate-spin" />
+              <div className="w-full">
+                <div className="flex gap-6 overflow-hidden">
+                   {Array.from({ length: 4 }).map((_, i) => (
+                     <div key={i} className="min-w-[300px] md:min-w-[400px]">
+                       <div className="glass rounded-3xl p-4">
+                         <div className="animate-pulse bg-black/10 dark:bg-white/5 h-[250px] md:h-[300px] rounded-2xl mb-4" />
+                         <div className="flex justify-between mb-2">
+                           <div className="animate-pulse bg-black/10 dark:bg-white/5 h-6 w-1/2 rounded" />
+                           <div className="animate-pulse bg-black/10 dark:bg-white/5 h-6 w-16 rounded" />
+                         </div>
+                         <div className="animate-pulse bg-black/10 dark:bg-white/5 h-4 w-full rounded" />
+                       </div>
+                     </div>
+                   ))}
+                </div>
               </div>
             ) : products.length === 0 ? (
               <div className="w-full text-center text-muted-foreground py-20">

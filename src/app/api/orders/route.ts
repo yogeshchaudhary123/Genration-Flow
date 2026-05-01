@@ -5,7 +5,7 @@ import { rateLimit, getIp } from "@/lib/rate-limit";
 
 export async function GET(req: Request) {
   const ip = getIp(req);
-  if (!rateLimit(ip, 50, 60000).success) {
+  if (!rateLimit(ip, 50, 60000, "orders_get").success) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
