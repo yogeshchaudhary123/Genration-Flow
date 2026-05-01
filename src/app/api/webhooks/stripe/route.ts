@@ -29,7 +29,22 @@ export async function POST(req: Request) {
   }
 
   try {
-    if (event.type === "payment_intent.succeeded") {
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as any;
+
+      const orderId = session.metadata?.orderId;
+      const transactionId = session.payment_intent;
+
+      logger.info(`✅ Checkout completed for order ${orderId}`);
+
+      if (!orderId) {
+        logger.error("Order ID missing in metadata");
+        return NextResponse.json({ error: "Missing orderId" }, { status: 400 });
+      }
+
+      await PaymentService.verifyStripePayment(transactionId);
+    }
+    else if (event.type === "payment_intent.succeeded") {
       const paymentIntent = event.data.object as any;
       const transactionId = paymentIntent.id;
 
