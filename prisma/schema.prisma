@@ -45,6 +45,7 @@ model User {
   
   cart          Cart?
   orders        Order[]
+  memories      AiMemory[]
 }
 
 model Product {
@@ -62,6 +63,7 @@ model Product {
   sizes       String?  @db.Text // Comma separated
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  embedding   String?  @db.LongText // JSON string of vector embedding
 
   cartItems   CartItem[]
   orderItems  OrderItem[]
@@ -128,4 +130,17 @@ model Payment {
   signature       String?       @db.Text
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+}
+
+model AiMemory {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key       String   // e.g., 'size_preference', 'style', 'budget'
+  value     String   @db.Text
+  context   String?  @db.Text // Optional context about why this was remembered
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
