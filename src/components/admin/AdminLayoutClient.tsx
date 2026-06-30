@@ -48,7 +48,7 @@ export function AdminLayoutClient({ children }: AdminLayoutClientProps) {
         <AdminHeader onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)} />
 
         {/* Content Wrapper */}
-        <main className="flex-1 pt-24 p-6 md:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 pt-28 pb-6 px-6 md:pb-8 md:px-8 max-w-7xl w-full mx-auto">
           {children}
         </main>
       </div>
