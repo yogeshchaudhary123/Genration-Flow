@@ -9,6 +9,7 @@ import { mockReviews } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import { toast } from "react-hot-toast";
 import { ProductDetailSkeleton } from "@/components/products/ProductSkeleton";
+import { useSession } from "next-auth/react";
 
 export default function ProductDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = use(params);
@@ -21,7 +22,9 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ slug:
   const [isAdded, setIsAdded] = useState(false);
 
   const router = useRouter();
-  const { addToCart, toggleAiChat, user } = useStore();
+  const { data: session } = useSession();
+  const user = session?.user;
+  const { addToCart, toggleAiChat } = useStore();
 
   useEffect(() => {
     const fetchProduct = async () => {

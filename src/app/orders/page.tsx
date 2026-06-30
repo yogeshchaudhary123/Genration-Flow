@@ -5,13 +5,17 @@ import { Package, Truck, CheckCircle2, Clock, MapPin, ChevronRight, LogOut, Aler
 import { motion } from "framer-motion";
 import { useStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 export default function OrdersPage() {
+  console.log('orders')
+
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const { user, logout } = useStore();
+  const { data: session } = useSession();
+  const user = session?.user;
+  const { logout } = useStore();
   const router = useRouter();
 
   useEffect(() => {

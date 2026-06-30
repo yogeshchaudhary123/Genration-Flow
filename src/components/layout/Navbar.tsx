@@ -50,6 +50,9 @@ export function Navbar() {
     { name: "Contact", href: "/contact" },
   ];
 
+  const isAdmin = session?.user && (session.user as any).role === "ADMIN";
+  const allLinks = isAdmin ? [...navLinks, { name: "Admin", href: "/admin" }] : navLinks;
+
   return (
     <header
       className={`fixed top-0 w-full z-50 transition-all duration-300 ${
@@ -71,7 +74,7 @@ export function Navbar() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
+          {allLinks.map((link) => (
             <Link
               key={link.name}
               href={link.href}
@@ -98,7 +101,7 @@ export function Navbar() {
             <Search size={20} />
           </button>
           
-          <Link href={user ? "/orders" : "/login"} className="p-2 text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
+          <Link href={session?.user ? "/orders" : "/login"} className="p-2 text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
             <User size={20} />
           </Link>
           
@@ -147,7 +150,7 @@ export function Navbar() {
             className="md:hidden bg-background/95 backdrop-blur-xl border-b border-black/10 dark:border-white/10 overflow-hidden"
           >
             <div className="px-4 py-4 flex flex-col gap-4">
-              {navLinks.map((link) => (
+              {allLinks.map((link) => (
                 <Link
                   key={link.name}
                   href={link.href}
@@ -161,7 +164,7 @@ export function Navbar() {
               ))}
               <div className="h-px bg-black/10 dark:bg-white/10 my-2" />
               <Link
-                href={user ? "/orders" : "/login"}
+                href={session?.user ? "/orders" : "/login"}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="text-lg font-medium p-2 rounded-lg text-muted-foreground flex items-center gap-2"
               >

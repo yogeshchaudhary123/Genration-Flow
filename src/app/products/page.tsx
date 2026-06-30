@@ -10,6 +10,7 @@ import { categories } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import { toast } from "react-hot-toast";
 import { ProductGridSkeleton } from "@/components/products/ProductSkeleton";
+import { useSession } from "next-auth/react";
 
 function ProductsContent() {
   const searchParams = useSearchParams();
@@ -22,7 +23,9 @@ function ProductsContent() {
   const [loadingProductId, setLoadingProductId] = useState<string | null>(null);
   const [addedProductId, setAddedProductId] = useState<string | null>(null);
   const router = useRouter();
-  const { addToCart, user } = useStore();
+  const { data: session } = useSession();
+  const user = session?.user;
+  const { addToCart } = useStore();
 
   useEffect(() => {
     const fetchProducts = async () => {

@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 export interface CartItem {
   id: string;
@@ -53,8 +52,7 @@ interface AppState {
 let _cartVersion = 0;
 
 export const useStore = create<AppState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       // ── Cart State ──────────────────────────────────────────────────────
 
       cart: [],
@@ -267,10 +265,5 @@ export const useStore = create<AppState>()(
       toggleCart: (open) =>
         set((state) => ({ isCartOpen: open !== undefined ? open : !state.isCartOpen })),
       isSyncing: false,
-    }),
-    {
-      name: 'generation-flow-storage',
-      partialize: (state) => ({ user: state.user }),
-    }
-  )
+    })
 );

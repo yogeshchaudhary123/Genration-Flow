@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bot, Mail, Lock, ArrowRight, User } from "lucide-react";
-import { useStore } from "@/lib/store";
 import { motion } from "framer-motion";
 import { signIn } from "next-auth/react";
 
@@ -13,7 +12,6 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useStore();
   const router = useRouter();
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -44,7 +42,6 @@ export default function RegisterPage() {
         throw new Error(signInRes.error);
       }
 
-      login({ id: data.userId, name, email });
       router.push("/");
     } catch (error) {
       console.error(error);

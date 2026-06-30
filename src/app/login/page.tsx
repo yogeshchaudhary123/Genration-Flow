@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bot, Mail, Lock, ArrowRight } from "lucide-react";
-import { useStore } from "@/lib/store";
 import { motion } from "framer-motion";
 import { signIn } from "next-auth/react";
 
@@ -12,7 +11,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useStore();
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -30,9 +28,6 @@ export default function LoginPage() {
         throw new Error("Invalid email or password");
       }
 
-      // After successful login, update Zustand store
-      // In a full implementation we'd fetch user details here
-      login({ id: "user_session", name: email.split("@")[0], email });
       router.push("/");
     } catch (error) {
       console.error(error);
