@@ -19,6 +19,7 @@ const prismaClientSingleton = () => {
     password: decodeURIComponent(dbUrl.password),
     database: dbUrl.pathname.substring(1),
     connectTimeout: 30000,
+    allowPublicKeyRetrieval: true,
   });
   
   return new PrismaClient({ adapter });
